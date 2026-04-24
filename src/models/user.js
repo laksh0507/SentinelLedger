@@ -1,6 +1,13 @@
 const mongoose = require("mongoose")
 const bcrypt = require("bcryptjs");
 
+/**
+ * User Model - Represents a Human or System entity in the banking ecosystem.
+ * 
+ * Features:
+ * - Automatic password hashing via pre-save hook.
+ * - Selective field hiding (Password/System status) for security.
+ */
 const userSchema = new mongoose.Schema({
     email: {
         type: String,
@@ -15,29 +22,37 @@ const userSchema = new mongoose.Schema({
         required: [true, "password is required for creating account"],
         minlength: [6, "password must be atleast 6 characters long"],
         maxlength: [12, "password must be less than 12 characters long"],
-        select: false
+        select: false // Hidden by default to prevent accidental leak in API responses
     },
     name: {
         type: String,
         required: [true, "Name is required"]
     },
+    /**
+     * systemuser flag
+     * @description Identifies internal system accounts used for seeding liquidity.
+     * @example true -> Use this for the "Central Bank" account.
+     * @example false -> Standard retail customer.
+     */
     systemuser: {
         type: Boolean,
         default: false,
-        immutable: true,
+        immutable: true, // Once created, a standard user cannot "hack" themselves to become a system user
         select: false
     }
 },
     {
-        timestamps: true
+        timestamps: true // Tracks createdAt and updatedAt for auditing
     }
 )
 
+// Hashing logic: Ensures passwords are never stored in plain text.
 userSchema.pre("save", async function () {
     if (!this.isModified("password")) return;
     this.password = await bcrypt.hash(this.password, 10);
 })
 
+// Authentication helper: Compares provided password with the hashed version in DB.
 userSchema.methods.comparePassword = async function (password) {
     return await bcrypt.compare(password, this.password);
 }

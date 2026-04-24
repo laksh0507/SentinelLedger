@@ -1,24 +1,31 @@
 const ApiError = require("../utils/ApiError");
 
+/**
+ * Global Error Middleware
+ * 
+ * Logic:
+ * 1. Catch any unhandled error or "ApiError" in the system.
+ * 2. Format it into a clean JSON response (never crash the server).
+ * 3. In development, provide the stack trace for debugging.
+ */
 const errorMiddleware = (err, req, res, next) => {
-    let error = err;
+    let { statusCode, message } = err;
 
-    if (!(error instanceof ApiError)) {
-        const statusCode = error.statusCode || 500;
-        const message = error.message || "Internal Server Error";
-        error = new ApiError(statusCode, message, error?.errors || [], err.stack);
+    // If it's not a custom ApiError, default to 500 (Internal Server Error)
+    if (!(err instanceof ApiError)) {
+        statusCode = 500;
+        message = err.message || "Internal Server Error";
     }
 
     const response = {
         success: false,
-        message: error.message,
-        errors: error.errors,
-        ...(process.env.NODE_ENV === "development" ? { stack: error.stack } : {}),
+        statusCode,
+        message,
+        // Pro-Tip: Hide stack trace in production for security!
+        ...(process.env.NODE_ENV === "development" ? { stack: err.stack } : {})
     };
 
-    console.error(`[ERROR] ${error.message}\nStack: ${error.stack}`);
-
-    return res.status(error.statusCode).json(response);
+    return res.status(statusCode).json(response);
 };
 
 module.exports = errorMiddleware;

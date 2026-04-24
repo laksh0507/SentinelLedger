@@ -1,10 +1,20 @@
 const mongoose = require("mongoose");
 
+/**
+ * Ledger Model - The Immutable Source of Truth.
+ * 
+ * Rules:
+ * 1. Double-Entry: Every Debit must have a matching Credit (across the system).
+ * 2. Immutability: Once a ledger entry is created, it can NEVER be edited or deleted.
+ * 
+ * @description The ledger is an audit trail. If the account balance is ever 
+ * questioned, we sum the ledger entries to verify the truth.
+ */
 const ledgerschema= new mongoose.Schema({
     
     account:{
         type:mongoose.Schema.Types.ObjectId,
-        ref: "account",
+        ref: "Account",
         required: [true,"ledger must be associated with an account"],
         index: true,
         immutable: true
@@ -19,12 +29,17 @@ const ledgerschema= new mongoose.Schema({
     
     transaction:{
         type:mongoose.Schema.Types.ObjectId,
-        ref: "transaction",
+        ref: "Transaction",
         required:[true,"ledger must be associated with a transaction"],
         index: true,
         immutable: true
     },
     
+    /**
+     * Entry Type
+     * @example "DEBIT" -> Money leaving (-).
+     * @example "CREDIT" -> Money entering (+).
+     */
     type:{
         type:String,
         enum:{
@@ -36,8 +51,9 @@ const ledgerschema= new mongoose.Schema({
     }
 })
 
+// Sentinel Safety: Prevents ANY modification of financial history.
 function preventledgermodification(){
-    throw new Error("ledger entried are immutable and cannot be modified")
+    throw new Error("ledger entries are immutable and cannot be modified. Create a reversal transaction instead.")
 }
 
 ledgerschema.pre('findOneAndUpdate',preventledgermodification);
@@ -49,7 +65,5 @@ ledgerschema.pre('remove',preventledgermodification);
 ledgerschema.pre('findOneAndDelete',preventledgermodification)
 ledgerschema.pre('findOneAndReplace',preventledgermodification)
 
-
-const ledgerModel = mongoose.model("ledger",ledgerschema);
-
+const ledgerModel = mongoose.model("Ledger",ledgerschema);
 module.exports = ledgerModel;
