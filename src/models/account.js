@@ -43,6 +43,41 @@ const accountSchema = new mongoose.Schema({
     timestamps: true
 });
 
+/**
+ * getBalance - Audit Tool (The "Aggregation Pipeline")
+ * @description Calculates the balance from scratch by summing all ledger DEBITs and CREDITs.
+ * @returns {Number} The derived balance.
+ */
+accountSchema.methods.getBalance = async function () {
+    const ledgerModel = mongoose.model("Ledger");
+    const balanceData = await ledgerModel.aggregate([
+        { $match: { account: this._id } },
+        {
+            $group: {
+                _id: null,
+                totalDebit: {
+                    $sum: {
+                        $cond: [{ $eq: ["$type", "DEBIT"] }, "$amount", 0]
+                    }
+                },
+                totalCredit: {
+                    $sum: {
+                        $cond: [{ $eq: ["$type", "CREDIT"] }, "$amount", 0]
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                calcBalance: { $subtract: ["$totalCredit", "$totalDebit"] }
+            }
+        }
+    ]);
+
+    return balanceData.length === 0 ? 0 : balanceData[0].calcBalance;
+};
+
 accountSchema.index({ user: 1, status: 1 }); // Optimized for finding user's active accounts
 
 const accountModel = mongoose.model("Account", accountSchema);
