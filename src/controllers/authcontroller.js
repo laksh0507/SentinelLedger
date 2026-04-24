@@ -85,4 +85,16 @@ const login = asyncHandler(async (req, res) => {
 });
 
 
-module.exports = { register, login };
+const logout = asyncHandler(async (req, res) => {
+    const options = {
+        httpOnly: true,
+        secure: true
+    };
+
+    return res
+        .status(200)
+        .clearCookie("token", options)
+        .json(new ApiResponse(200, {}, "User logged out successfully"));
+});
+
+module.exports = { register, login, logout };

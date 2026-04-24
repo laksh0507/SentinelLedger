@@ -14,5 +14,6 @@ router.post("/register", authcontroller.register);
  * @description Authenticates user and returns a Secure/HttpOnly JWT cookie.
  */
 router.post("/login", authcontroller.login);
+router.post("/logout", authcontroller.logout);
 
 module.exports = router;
