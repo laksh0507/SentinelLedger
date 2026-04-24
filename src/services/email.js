@@ -46,4 +46,20 @@ async function sendregisteremail(useremail,name) {
     await sendEmail(useremail, subject, text, html);
 }
 
-module.exports = {sendregisteremail};
+async function sendtransactionemail(useremail,name,amount,toaccount)
+{
+    const subject="Transaction Alert";
+    const text=`Hello ${name}, you have received ${amount} from ${toaccount}`;
+    const html=`<h1>Hello ${name}, you have received ${amount} from ${toaccount}</h1>`;
+    await sendEmail(useremail, subject, text, html);
+}
+
+async function sendtransactionfailure(useremail,name,amount,toaccount)
+{
+    const subject="Transaction Alert";
+    const text=`Hello ${name}, you have received ${amount} from ${toaccount}`;
+    const html=`<h1>Hello ${name}, you have received ${amount} from ${toaccount}</h1>`;
+    await sendEmail(useremail, subject, text, html);
+}
+
+module.exports = {sendregisteremail,sendtransactionemail,sendtransactionfailure};

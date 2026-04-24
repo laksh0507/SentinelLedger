@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-
+const ledgermodel=require("./ledger");
 const accountSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
@@ -13,13 +13,19 @@ const accountSchema = new mongoose.Schema({
         default: "ACTIVE"
     },
     currency: {
-        type: String, 
+        type: String,
         required: [true, "currency is required for creating an account"],
         default: "INR"
+    },
+    balance: {
+        type: Number,
+        default: 0
     }
 }, {
     timestamps: true
 });
+
+
 
 accountSchema.index({ user: 1, status: 1 });
 
