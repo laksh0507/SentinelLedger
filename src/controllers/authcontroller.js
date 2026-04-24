@@ -4,6 +4,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
 const emailservice = require("../services/email");
+const accountModel = require("../models/account");
 
 /**
  * @controller AuthController
@@ -82,5 +83,6 @@ const login = asyncHandler(async (req, res) => {
         .cookie("token", token, options)
         .json(new ApiResponse(200, { user: { _id: user._id, email, name: user.name } }, "User logged in successfully"));
 });
+
 
 module.exports = { register, login };
