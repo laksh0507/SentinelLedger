@@ -1,112 +1,118 @@
-# 🛡️ SentinelLedger: Production-Grade Fintech Engine
+# <p align="center">🛡️ SentinelLedger</p>
+<p align="center"><i>A High-Integrity Production Fintech Engine for the Modern Web</i></p>
 
-**SentinelLedger** is a secure, high-performance financial ledger system built for reliability and data integrity. Unlike standard banking tutorials, this project implements **SDE-2 level architectural patterns** to handle real-world fintech challenges like race conditions, floating-point errors, and atomic double-entry bookkeeping.
-
----
-
-## 🚀 Key Engineering Highlights
-
-### 1. **Financial Integrity (The Pro Way)**
-*   **Integer-Based Accounting**: Stores all currency in **Paise/Cents** (Integers) to eliminate floating-point rounding errors common in JavaScript.
-*   **ACID Transactions**: Uses MongoDB Sessions to ensure that "Money Deducted = Money Received." If any step fails, the entire transaction rolls back perfectly.
-*   **Double-Entry Bookkeeping**: Every transaction creates balanced **Debit/Credit** entries in an immutable `Ledger` for 100% audit accuracy.
-
-### 2. **Advanced Security & Robustness**
-*   **Idempotency Protection**: Prevents accidental double-charges if a user clicks "Pay" twice due to slow internet.
-*   **Deadlock Prevention**: Implements **Sorted ID Locking** to prevent circular wait states during concurrent mutual transfers.
-*   **Closure Verification**: Soft-closes accounts only if the balance is exactly zero and no transactions are `PENDING`.
-
-### 3. **Smart Notification System**
-*   **Asynchronous Emails**: Professional HTML transaction receipts sent via a non-blocking service, ensuring the core API remains lightning-fast.
+<p align="center">
+  <img src="./sentinel_ledger_hero_1777044461784.png" width="600" alt="SentinelLedger Hero">
+</p>
 
 ---
 
-## 🛠️ Tech Stack
-*   **Runtime**: Node.js
-*   **Framework**: Express.js
-*   **Database**: MongoDB (with Mongoose Transactions)
-*   **Messaging**: NodeMailer (for HTML notifications)
-*   **Security**: JWT Authentication, Custom Error Middlewares
+## 🚀 The Core Philosophy
+**SentinelLedger** isn't just a banking app; it's a demonstration of **Financial Engineering**. It solves the "hidden" problems of fintech: race conditions, rounding errors, and data inconsistency. By combining **ACID Compliance** with **Double-Entry Bookkeeping**, it ensures that "Your Money is Always Where it Should Be."
 
 ---
 
-## 📂 System Architecture
+## 🛠️ Advanced Architectural Features
+
+### 💎 **Financial Precision**
+- **Integer-Exclusive Math**: All operations are performed in **Paise (Integer)**. By multiplying inputs by 100 on intake, we eliminate the floating-point precision issues that plague standard JavaScript financial apps. 
+- **Double-Entry Ledger**: Every single movement of money creates a symmetric `DEBIT` and `CREDIT` record in an immutable ledger, ensuring zero leakage.
+
+### 🛡️ **Defensive Engineering**
+- **Idempotency Control**: Uses unique keys to ensure that a command (like `Pay $100`) is executed **EXACTLY ONCE**, even if the client retries the request a dozen times.
+- **Atomic Reliability**: All multi-account updates are wrapped in **MongoDB Sessions**. If the server, network, or database fails mid-transfer, the entire state is rolled back automatically. هیچ پولی گم نمیشود (No money is ever lost).
+- **Deadlock Shield**: System matches and sorts account IDs before locking, preventing concurrent circular wait states—a common cause of server hangs in high-traffic banking systems.
+
+---
+
+## 📊 System Architecture
 
 ```mermaid
-graph TD
-    User((User)) -->|Requests| API[Express API]
-    API --> Auth[JWT Middleware]
-    Auth --> Controller[Transaction Controller]
-    Controller -->|Start Session| DB[(MongoDB)]
-    DB -->|Update| Sender[Sender Account]
-    DB -->|Update| Receiver[Receiver Account]
-    DB -->|Insert| Record[Transaction Record]
-    DB -->|Insert| Audit[Ledger/Audit Trail]
-    Record --> Email[Async Email Service]
+graph TB
+    subgraph Client_Layer
+        User((User))
+    end
+
+    subgraph Security_Layer
+        auth[JWT authMiddleware]
+        idem[Idempotency Gate]
+    end
+
+    subgraph Logic_Layer
+        ATC[Account Controller]
+        TXC[Transaction Controller]
+        Sess[ACID Session Manager]
+    end
+
+    subgraph Data_Layer
+        Accounts[(Accounts DB)]
+        Ledger[(Immutable Ledger)]
+        Txns[(Transaction Records)]
+    end
+
+    subgraph Service_Layer
+        Mail[Asynchronous NodeMailer]
+    end
+
+    User -->|Secure Request| auth
+    auth -->|Validate Key| idem
+    idem -->|Process| TXC
+    TXC -->|Start Transaction| Sess
+    Sess -->|Sort & Lock| Accounts
+    Sess -->|Double Entry| Ledger
+    Sess -->|Record| Txns
+    Sess -->|Commit| DB_Commit[Success Response]
+    Txns -.->|Trigger| Mail
 ```
 
 ---
 
-## 📍 Core API Endpoints
+## 📍 API Documentation
 
-### Authentication
+### **Authentication**
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Create a new user profile |
-| `POST` | `/api/auth/login` | Secure login & JWT generation |
-| `POST` | `/api/auth/logout` | Securely terminate the session |
+| `POST` | `/api/auth/register` | User Onboarding & Automated Email Verification |
+| `POST` | `/api/auth/login` | Secure JWT Session Generation (HttpOnly Cookie) |
+| `POST` | `/api/auth/logout` | Secure Session Termination |
 
-### Account Management
+### **Vault Operations**
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `POST` | `/api/account/` | Open a new bank account |
-| `GET` | `/api/account/all` | List all active accounts |
-| `GET` | `/api/account/balance/:id` | Real-time balance check |
-| `PATCH` | `/api/account/close/:id` | Safely close an account |
-| `DELETE` | `/api/account/delete/:id` | Permanent record removal |
+| `GET` | `/api/account/all` | Net Worth Summary (Cross-account View) |
+| `GET` | `/api/account/balance/:id` | Precision balance lookup (Real-time) |
+| `PATCH` | `/api/account/close/:id` | Soft-Close with 'Pending Check' safety lock |
+| `DELETE` | `/api/account/delete/:id` | Hard-Delete (Permanent record cleanup) |
 
-### Transactions
+### **Movement & History**
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `POST` | `/api/transaction/` | Peer-to-Peer money transfer |
-| `GET` | `/api/account/statement/:id` | Fetch immutable audit trail |
+| `POST` | `/api/transaction/` | Peer-to-Peer Transfer (Idempotency Protected) |
+| `GET` | `/api/account/statement/:id` | Immutable Ledger Audit Trail |
 
 ---
 
-## 📜 How to Run Locally
+## ⚡ Setup & Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-link>
-   ```
-
-2. **Install Dependencies**
+1. **Install Dependencies**
    ```bash
    npm install
    ```
 
-3. **Set up Environment Variables (.env)**
+2. **Configure Environment** (`.env`)
    ```env
    PORT=5000
-   MONGODB_URI=your_mongodb_connection_string
-   JWT_SECRET=your_secret_key
+   MONGODB_URI=your_uri
+   JWT_SECRET=your_secret
    EMAIL_USER=your_email
-   EMAIL_PASS=your_app_password
+   EMAIL_PASS=app_password
    ```
 
-4. **Start the Engine**
+3. **Ignite the Engine**
    ```bash
    npm run dev
    ```
 
 ---
 
-## 🛤️ Future Roadmap
-- [ ] **Multi-Factor Authentication (MFA)**: OTP verification for high-value transfers.
-- [ ] **Daily Limits**: Fraud prevention by capping daily spending.
-- [ ] **Admin Dashboard**: Real-time monitoring of system liquidity.
-- [ ] **Redis Caching**: Faster balance lookups for high-frequency users.
-
----
-
-> **Note**: This project follows strict financial industry standards (ISO 20022 principles). Built with ❤️ for the Fintech community.
+> **Note**: This project follows strict financial industry standards (ISO 20022 principles). Built with ❤️ from **lakshmisha** for the Fintech community.

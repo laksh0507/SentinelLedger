@@ -86,14 +86,9 @@ const login = asyncHandler(async (req, res) => {
 
 
 const logout = asyncHandler(async (req, res) => {
-    const options = {
-        httpOnly: true,
-        secure: true
-    };
-
     return res
         .status(200)
-        .clearCookie("token", options)
+        .clearCookie("token", { httpOnly: true, secure: true })
         .json(new ApiResponse(200, {}, "User logged out successfully"));
 });
 
