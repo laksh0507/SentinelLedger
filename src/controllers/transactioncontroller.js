@@ -48,6 +48,11 @@ async function createtransaction(req, res) {
                 throw new Error("One or both accounts are not active");
             }
 
+            // SECURITY FIX: Verify ownership of the source account
+            if (fromAcc.user.toString() !== req.user._id.toString()) {
+                throw new Error("Unauthorized: You do not own the source account");
+            }
+
             // Balance check (Comparing Paise with Paise)
             if (fromAcc.balance < amountInPaise) {
                 throw new Error("Insufficient funds");
