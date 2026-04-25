@@ -7,6 +7,20 @@
 
 ---
 
+## 🔍 Problem Statement
+Most modern banking applications face three critical technical failures that can lead to financial loss and user distrust:
+1.  **Floating-Point Inaccuracy**: JavaScript's native number handling causes `0.1 + 0.2` to equal `0.30000000000000004`, leading to "ghost cents" that break financial audits.
+2.  **Race Conditions (Double Spending)**: High-frequency concurrent requests can cause an account to be debited twice before the balance is updated, leading to negative balances.
+3.  **Audit Opacity**: Without an immutable ledger, it is impossible to reconstruct a user's financial history if the stored balance is ever corrupted or questioned.
+
+## 💡 The Sentinel Solution
+**SentinelLedger** is engineered to be a "Zero-Error" environment by implementing:
+- **Integer-Exclusive Math**: By treating all currency as "Paise/Cents" (integers), we achieve 100% mathematical precision.
+- **ACID Atomic Sessions**: Every transfer is a "Success or Nothing" operation, preventing partial updates during server crashes.
+- **Immutable Ledgering**: Every balance update is backed by an unchangeable audit trail, ensuring every cent is accounted for.
+
+---
+
 ## 🚀 Overview
 **SentinelLedger** is a production-grade fintech backend designed to handle financial transactions with extreme precision and reliability. Built on the principles of **Double-Entry Bookkeeping** and **ACID Transactions**, it ensures that financial data is immutable, accurate, and secure.
 
