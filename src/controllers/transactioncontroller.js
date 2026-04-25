@@ -9,9 +9,9 @@ const emailService = require("../services/email");
  */
 async function createtransaction(req, res) {
     try {
-        let { fromaccount, toaccount, amount, idempotencykey } = req.body;
+        let { fromAccount, toAccount, amount, idempotencyKey } = req.body;
 
-        if (!fromaccount || !toaccount || !amount || !idempotencykey) {
+        if (!fromAccount || !toAccount || !amount || !idempotencyKey) {
             return res.status(400).json({ message: "All fields are required" });
         }
 
@@ -22,7 +22,7 @@ async function createtransaction(req, res) {
         }
 
         // Idempotency Check
-        const exists = await transactionModel.findOne({ idempotencykey });
+        const exists = await transactionModel.findOne({ idempotencyKey });
         if (exists) {
             if (exists.status === "COMPLETED") {
                 return res.status(200).json({
@@ -39,8 +39,8 @@ async function createtransaction(req, res) {
 
         try {
             // Lock accounts and verify status inside session
-            const fromAcc = await accountModel.findById(fromaccount).session(session);
-            const toAcc = await accountModel.findById(toaccount).session(session).populate("user");
+            const fromAcc = await accountModel.findById(fromAccount).session(session);
+            const toAcc = await accountModel.findById(toAccount).session(session).populate("user");
 
             if (!fromAcc || !toAcc) throw new Error("Account not found");
 
@@ -59,33 +59,33 @@ async function createtransaction(req, res) {
             }
 
             // Deadlock Prevention: Sorted IDs
-            const sortedIds = [fromaccount, toaccount].sort();
+            const sortedIds = [fromAccount, toAccount].sort();
             for (const id of sortedIds) {
-                const isFrom = id.toString() === fromaccount.toString();
+                const isFrom = id.toString() === fromAccount.toString();
                 const change = isFrom ? -amountInPaise : amountInPaise;
                 await accountModel.findByIdAndUpdate(id, { $inc: { balance: change } }, { session });
             }
 
             // Record transaction (Storing as Paise)
             const [transaction] = await transactionModel.create([{
-                fromaccount,
-                toaccount,
+                fromAccount,
+                toAccount,
                 amount: amountInPaise,
-                idempotencykey,
+                idempotencyKey,
                 status: "COMPLETED"
             }], { session });
 
             // Double-Entry Ledger (Storing as Paise)
             await ledgerModel.create([
-                { account: fromaccount, amount: amountInPaise, transaction: transaction._id, type: "DEBIT" },
-                { account: toaccount, amount: amountInPaise, transaction: transaction._id, type: "CREDIT" }
-            ], { session });
+                { account: fromAccount, amount: amountInPaise, transaction: transaction._id, type: "DEBIT" },
+                { account: toAccount, amount: amountInPaise, transaction: transaction._id, type: "CREDIT" }
+            ], { session, ordered: true });
 
             await session.commitTransaction();
             session.endSession();
 
             // Notify
-            emailService.sendtransactionemail(req.user.email, req.user.name, amount, toaccount).catch(() => {});
+            emailService.sendtransactionemail(req.user.email, req.user.name, amount, toAccount).catch(() => {});
 
             return res.status(201).json({
                 message: "Transfer successful",
@@ -109,8 +109,8 @@ async function createtransaction(req, res) {
  */
 async function createinitialfundstransaction(req, res) {
     try {
-        const { toaccount, amount, idempotencykey } = req.body;
-        if (!toaccount || !amount || !idempotencykey) {
+        const { toAccount, amount, idempotencyKey } = req.body;
+        if (!toAccount || !amount || !idempotencyKey) {
             return res.status(400).json({ message: "All fields are required" });
         }
 
@@ -119,31 +119,31 @@ async function createinitialfundstransaction(req, res) {
         const fromuseraccount = await accountModel.findOne({ user: req.user._id });
         if (!fromuseraccount) return res.status(404).json({ message: "System account missing" });
 
-        const exists = await transactionModel.findOne({ idempotencykey });
+        const exists = await transactionModel.findOne({ idempotencyKey });
         if (exists) return res.status(200).json({ message: "Success (Duplicate)", transaction: exists });
 
         const session = await mongoose.startSession();
         session.startTransaction();
 
         try {
-            const targetAcc = await accountModel.findById(toaccount).session(session).populate("user");
+            const targetAcc = await accountModel.findById(toAccount).session(session).populate("user");
             if (!targetAcc || targetAcc.status !== "ACTIVE") throw new Error("Target account inactive");
 
             await accountModel.findByIdAndUpdate(fromuseraccount._id, { $inc: { balance: -amountInPaise } }, { session });
-            await accountModel.findByIdAndUpdate(toaccount, { $inc: { balance: amountInPaise } }, { session });
+            await accountModel.findByIdAndUpdate(toAccount, { $inc: { balance: amountInPaise } }, { session });
 
             const [transaction] = await transactionModel.create([{
-                fromaccount: fromuseraccount._id,
-                toaccount,
+                fromAccount: fromuseraccount._id,
+                toAccount,
                 amount: amountInPaise,
-                idempotencykey,
+                idempotencyKey,
                 status: "COMPLETED"
             }], { session });
 
             await ledgerModel.create([
                 { account: fromuseraccount._id, amount: amountInPaise, transaction: transaction._id, type: "DEBIT" },
-                { account: toaccount, amount: amountInPaise, transaction: transaction._id, type: "CREDIT" }
-            ], { session });
+                { account: toAccount, amount: amountInPaise, transaction: transaction._id, type: "CREDIT" }
+            ], { session, ordered: true });
 
             await session.commitTransaction();
             session.endSession();

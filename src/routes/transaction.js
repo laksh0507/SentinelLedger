@@ -5,11 +5,11 @@ const transactioncontroller = require('../controllers/transactioncontroller');
 const router = Router();
 
 /**
- * @route POST /api/transaction/transfer
+ * @route POST /api/transactions/
  * @access Private (Standard User)
  * @description Standard peer-to-peer money movement.
  */
-router.post("/transfer", authMiddleware.authMiddleware, transactioncontroller.createtransaction);
+router.post("/", authMiddleware.authMiddleware, transactioncontroller.createtransaction);
 
 /**
  * @route POST /api/transaction/system/initial-funds

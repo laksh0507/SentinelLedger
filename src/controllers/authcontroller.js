@@ -4,7 +4,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
 const emailservice = require("../services/email");
-const accountModel = require("../models/account");
+const blacklistModel = require("../models/blacklist");
 
 /**
  * @controller AuthController
@@ -86,6 +86,13 @@ const login = asyncHandler(async (req, res) => {
 
 
 const logout = asyncHandler(async (req, res) => {
+    const token = req.cookies?.token;
+
+    if (token) {
+        // Add token to blacklist so it can't be reused even if stolen
+        await blacklistModel.create({ token });
+    }
+
     return res
         .status(200)
         .clearCookie("token", { httpOnly: true, secure: true })

@@ -29,15 +29,14 @@ const userSchema = new mongoose.Schema({
         required: [true, "Name is required"]
     },
     /**
-     * systemuser flag
+     * systemUser flag
      * @description Identifies internal system accounts used for seeding liquidity.
      * @example true -> Use this for the "Central Bank" account.
      * @example false -> Standard retail customer.
      */
-    systemuser: {
+    systemUser: {
         type: Boolean,
         default: false,
-        immutable: true, // Once created, a standard user cannot "hack" themselves to become a system user
         select: false
     }
 },

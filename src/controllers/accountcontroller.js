@@ -82,9 +82,9 @@ const getclosedaccounts = asyncHandler(async (req, res) => {
  */
 const getbalance = asyncHandler(async (req, res) => {
     try {
-        const { accountid } = req.params;
+        const { accountId } = req.params;
         const account = await accountmodel.findOne({
-            _id: accountid,
+            _id: accountId,
             user: req.user._id
         });
 
@@ -107,8 +107,8 @@ const getbalance = asyncHandler(async (req, res) => {
  */
 const closeaccount = asyncHandler(async (req, res) => {
     try {
-        const { accountid } = req.params;
-        const account = await accountmodel.findOne({ _id: accountid, user: req.user._id });
+        const { accountId } = req.params;
+        const account = await accountmodel.findOne({ _id: accountId, user: req.user._id });
 
         if (!account) return res.status(404).json({ message: "Account not found" });
         if (account.status === "CLOSED") return res.status(200).json({ message: "Already closed." });
@@ -120,7 +120,7 @@ const closeaccount = asyncHandler(async (req, res) => {
         }
 
         const pendingTransaction = await transactionModel.findOne({
-            $or: [{ fromaccount: accountid }, { toaccount: accountid }],
+            $or: [{ fromAccount: accountId }, { toAccount: accountId }],
             status: "PENDING"
         });
 
@@ -142,12 +142,12 @@ const closeaccount = asyncHandler(async (req, res) => {
  */
 const getstatement = asyncHandler(async (req, res) => {
     try {
-        const { accountid } = req.params;
-        const account = await accountmodel.findOne({ _id: accountid, user: req.user._id });
+        const { accountId } = req.params;
+        const account = await accountmodel.findOne({ _id: accountId, user: req.user._id });
 
         if (!account) return res.status(404).json({ message: "Access denied" });
 
-        const statementRaw = await ledgermodel.find({ account: accountid })
+        const statementRaw = await ledgermodel.find({ account: accountId })
             .sort({ createdAt: -1 })
             .limit(10);
 
@@ -172,15 +172,15 @@ const getstatement = asyncHandler(async (req, res) => {
  */
 const deleteaccount = asyncHandler(async (req, res) => {
     try {
-        const { accountid } = req.params;
-        const account = await accountmodel.findOne({ _id: accountid, user: req.user._id });
+        const { accountId } = req.params;
+        const account = await accountmodel.findOne({ _id: accountId, user: req.user._id });
 
         if (!account) return res.status(404).json({ message: "Not found" });
         if (account.status !== "CLOSED") {
             return res.status(400).json({ message: "Must close account before deleting record." });
         }
 
-        await accountmodel.findByIdAndDelete(accountid);
+        await accountmodel.findByIdAndDelete(accountId);
         return res.status(200).json({ message: "Account record deleted permanently." });
     } catch (error) {
         return res.status(500).json({ message: "Internal error" });

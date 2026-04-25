@@ -20,8 +20,8 @@ app.use(express.json());
  * All routes are versioned implicitly within the /api prefix.
  */
 app.use("/api/auth", authRouter);
-app.use("/api/account", accountRouter);
-app.use("/api/transaction", transactionroutes);
+app.use("/api/accounts", accountRouter);
+app.use("/api/transactions", transactionroutes);
 
 /**
  * @section Error Handling

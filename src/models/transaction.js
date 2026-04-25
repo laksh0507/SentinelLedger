@@ -9,14 +9,14 @@ const mongoose = require("mongoose");
  */
 const transactionschema = new mongoose.Schema({
     
-    fromaccount:{
+    fromAccount:{
         type: mongoose.Schema.Types.ObjectId,
         ref:"Account",
         required:[true,"transaction must be associated with a from account"],
         index:true
     },
     
-    toaccount:{
+    toAccount:{
         type: mongoose.Schema.Types.ObjectId,
         ref:"Account",
         required:[true,"transaction must be associated with a to account"],
@@ -39,13 +39,10 @@ const transactionschema = new mongoose.Schema({
     },
     
     /**
-     * idempotencykey
+     * idempotencyKey
      * @description A unique string that identifies this specific intent.
-     * @example "order_550e8400-e29b-41d4-a716-446655440000"
-     * @usage If the client retries a failed request, the server uses this key
-     * to detect the retry and avoid deducting money a second time.
      */
-    idempotencykey:{
+    idempotencyKey:{
         type:String,
         required:[true,"idempotency key is required for creating a transaction"],
         unique:true, // Prevents duplicates at the DB level
