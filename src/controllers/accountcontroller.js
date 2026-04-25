@@ -81,25 +81,22 @@ const getclosedaccounts = asyncHandler(async (req, res) => {
  * getbalance - Get balance (Converts Paise to Main Currency)
  */
 const getbalance = asyncHandler(async (req, res) => {
-    try {
-        const { accountId } = req.params;
-        const account = await accountmodel.findOne({
-            _id: accountId,
-            user: req.user._id
-        });
+    const { accountId } = req.params;
+    
+    const account = await accountmodel.findOne({
+        _id: accountId,
+        user: req.user._id
+    });
 
-        if (!account) {
-            return res.status(404).json({ message: "Account not found or access denied" });
-        }
-
-        return res.status(200).json({
-            balance: account.balance / 100, // Conversion
-            currency: account.currency,
-            status: account.status
-        });
-    } catch (error) {
-        return res.status(500).json({ message: "Internal error" });
+    if (!account) {
+        throw new ApiError(404, "Account not found or access denied");
     }
+
+    return res.status(200).json({
+        balance: account.balance / 100, // Conversion
+        currency: account.currency,
+        status: account.status
+    });
 });
 
 /**

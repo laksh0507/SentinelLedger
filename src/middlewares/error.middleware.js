@@ -9,6 +9,7 @@ const ApiError = require("../utils/ApiError");
  * 3. In development, provide the stack trace for debugging.
  */
 const errorMiddleware = (err, req, res, next) => {
+    console.error("🔥 SERVER ERROR:", err.message || err);
     let { statusCode, message } = err;
 
     // If it's not a custom ApiError, default to 500 (Internal Server Error)
