@@ -30,51 +30,41 @@ const createaccount = asyncHandler(async (req, res) => {
  * getallaccounts - Fetches all accounts (Converts Paise to Main Currency)
  */
 const getallaccounts = asyncHandler(async (req, res) => {
-    try {
-        const user = req.user._id;
-        const accountsFiltered = await accountmodel.find({ user: user });
-        
-        // Convert Paise to Decimal for the User
-        const accounts = accountsFiltered.map(acc => ({
-            ...acc._doc,
-            balance: acc.balance / 100
-        }));
+    const user = req.user._id;
+    const accountsFiltered = await accountmodel.find({ user: user });
+    
+    // Convert Paise to Decimal for the User
+    const accounts = accountsFiltered.map(acc => ({
+        ...acc._doc,
+        balance: acc.balance / 100
+    }));
 
-        if (accounts.length === 0) {
-            return res.status(200).json({ message: "You have zero accounts. Kindly open one!" });
-        }
-
-        return res.status(200).json({
-            message: "All accounts fetched successfully",
-            accounts: accounts,
-            count: accounts.length
-        });
-    } catch (error) {
-        return res.status(500).json({ message: "Internal server error" });
+    if (accounts.length === 0) {
+        return res.status(200).json(new ApiResponse(200, { accounts: [], count: 0 }, "No accounts found. Kindly open one!"));
     }
+
+    return res.status(200).json(new ApiResponse(200, {
+        accounts: accounts,
+        count: accounts.length
+    }, "All accounts fetched successfully"));
 });
 
 /**
  * getclosedaccounts - Fetches closed accounts
  */
 const getclosedaccounts = asyncHandler(async (req, res) => {
-    try {
-        const user = req.user._id;
-        const closedAccountsRaw = await accountmodel.find({ user: user, status: "CLOSED" });
+    const user = req.user._id;
+    const closedAccountsRaw = await accountmodel.find({ user: user, status: "CLOSED" });
 
-        const accounts = closedAccountsRaw.map(acc => ({
-            ...acc._doc,
-            balance: acc.balance / 100
-        }));
+    const accounts = closedAccountsRaw.map(acc => ({
+        ...acc._doc,
+        balance: acc.balance / 100
+    }));
 
-        return res.status(200).json({
-            message: "Closed accounts fetched successfully",
-            accounts: accounts,
-            count: accounts.length
-        });
-    } catch (error) {
-        return res.status(500).json({ message: "Error fetching closed accounts" });
-    }
+    return res.status(200).json(new ApiResponse(200, {
+        accounts: accounts,
+        count: accounts.length
+    }, "Closed accounts fetched successfully"));
 });
 
 /**
@@ -92,96 +82,91 @@ const getbalance = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Account not found or access denied");
     }
 
-    return res.status(200).json({
+    return res.status(200).json(new ApiResponse(200, {
         balance: account.balance / 100, // Conversion
         currency: account.currency,
         status: account.status
-    });
+    }, "Balance fetched successfully"));
 });
 
 /**
  * closeaccount - Safe closure with balance and pending check
  */
 const closeaccount = asyncHandler(async (req, res) => {
-    try {
-        const { accountId } = req.params;
-        const account = await accountmodel.findOne({ _id: accountId, user: req.user._id });
+    const { accountId } = req.params;
+    const account = await accountmodel.findOne({ _id: accountId, user: req.user._id });
 
-        if (!account) return res.status(404).json({ message: "Account not found" });
-        if (account.status === "CLOSED") return res.status(200).json({ message: "Already closed." });
-
-        if (account.balance !== 0) {
-            return res.status(400).json({
-                message: `You have ${account.balance / 100} left! Please empty the account first.`
-            });
-        }
-
-        const pendingTransaction = await transactionModel.findOne({
-            $or: [{ fromAccount: accountId }, { toAccount: accountId }],
-            status: "PENDING"
-        });
-
-        if (pendingTransaction) {
-            return res.status(400).json({ message: "Pending transactions detected. Please wait." });
-        }
-
-        account.status = "CLOSED";
-        await account.save();
-
-        return res.status(200).json({ message: "Account closed successfully." });
-    } catch (error) {
-        return res.status(500).json({ message: "Server error" });
+    if (!account) {
+        throw new ApiError(404, "Account not found");
     }
+    
+    if (account.status === "CLOSED") {
+        return res.status(200).json(new ApiResponse(200, {}, "Account is already closed."));
+    }
+
+    if (account.balance !== 0) {
+        throw new ApiError(400, `You have ${account.balance / 100} remaining. Please empty the account before closing.`);
+    }
+
+    const pendingTransaction = await transactionModel.findOne({
+        $or: [{ fromAccount: accountId }, { toAccount: accountId }],
+        status: "PENDING"
+    });
+
+    if (pendingTransaction) {
+        throw new ApiError(400, "Pending transactions detected. Please complete or cancel them before closing.");
+    }
+
+    account.status = "CLOSED";
+    await account.save();
+
+    return res.status(200).json(new ApiResponse(200, {}, "Account closed successfully."));
 });
 
 /**
  * getstatement - Fetches history (Converts Paise to Main Currency)
  */
 const getstatement = asyncHandler(async (req, res) => {
-    try {
-        const { accountId } = req.params;
-        const account = await accountmodel.findOne({ _id: accountId, user: req.user._id });
+    const { accountId } = req.params;
+    const account = await accountmodel.findOne({ _id: accountId, user: req.user._id });
 
-        if (!account) return res.status(404).json({ message: "Access denied" });
-
-        const statementRaw = await ledgermodel.find({ account: accountId })
-            .sort({ createdAt: -1 })
-            .limit(10);
-
-        // Convert Integer amounts back to Decimals for display
-        const statement = statementRaw.map(entry => ({
-            ...entry._doc,
-            amount: entry.amount / 100
-        }));
-
-        return res.status(200).json({
-            message: account.status === "CLOSED" ? "History for closed account" : "Statement fetched",
-            statement: statement,
-            count: statement.length
-        });
-    } catch (error) {
-        return res.status(500).json({ message: "Error fetching statement" });
+    if (!account) {
+        throw new ApiError(403, "Access denied: Account not found or unauthorized");
     }
+
+    const statementRaw = await ledgermodel.find({ account: accountId })
+        .sort({ createdAt: -1 })
+        .limit(10);
+
+    // Convert Integer amounts back to Decimals for display
+    const statement = statementRaw.map(entry => ({
+        ...entry._doc,
+        amount: entry.amount / 100
+    }));
+
+    return res.status(200).json(new ApiResponse(200, {
+        statement: statement,
+        count: statement.length
+    }, account.status === "CLOSED" ? "History for closed account fetched" : "Statement fetched successfully"));
 });
 
 /**
  * deleteaccount - Permanent removal
  */
 const deleteaccount = asyncHandler(async (req, res) => {
-    try {
-        const { accountId } = req.params;
-        const account = await accountmodel.findOne({ _id: accountId, user: req.user._id });
+    const { accountId } = req.params;
+    const account = await accountmodel.findOne({ _id: accountId, user: req.user._id });
 
-        if (!account) return res.status(404).json({ message: "Not found" });
-        if (account.status !== "CLOSED") {
-            return res.status(400).json({ message: "Must close account before deleting record." });
-        }
-
-        await accountmodel.findByIdAndDelete(accountId);
-        return res.status(200).json({ message: "Account record deleted permanently." });
-    } catch (error) {
-        return res.status(500).json({ message: "Internal error" });
+    if (!account) {
+        throw new ApiError(404, "Account not found");
     }
+    
+    if (account.status !== "CLOSED") {
+        throw new ApiError(400, "Account must be CLOSED before it can be deleted.");
+    }
+
+    await accountmodel.findByIdAndDelete(accountId);
+    return res.status(200).json(new ApiResponse(200, {}, "Account record deleted permanently."));
 });
 
 module.exports = { 

@@ -1,5 +1,5 @@
 # <p align="center">🛡️ SentinelLedger</p>
-<p align="center"><i>A High-Integrity Production Fintech Engine for the Modern Web</i></p>
+<p align="center"><i>A High-Integrity, ACID-Compliant Fintech Engine for Modern Financial Applications</i></p>
 
 <p align="center">
   <img src="./sentinel_ledger_hero_1777044461784.png" width="600" alt="SentinelLedger Hero">
@@ -7,112 +7,143 @@
 
 ---
 
-## 🚀 The Core Philosophy
-**SentinelLedger** isn't just a banking app; it's a demonstration of **Financial Engineering**. It solves the "hidden" problems of fintech: race conditions, rounding errors, and data inconsistency. By combining **ACID Compliance** with **Double-Entry Bookkeeping**, it ensures that "Your Money is Always Where it Should Be."
+## 🚀 Overview
+**SentinelLedger** is a production-grade fintech backend designed to handle financial transactions with extreme precision and reliability. Built on the principles of **Double-Entry Bookkeeping** and **ACID Transactions**, it ensures that financial data is immutable, accurate, and secure.
+
+This project solves critical fintech challenges like rounding errors, race conditions, and unauthorized account access using advanced architectural patterns.
 
 ---
 
-## 🛠️ Advanced Architectural Features
+## 💎 Key Features
 
-### 💎 **Financial Precision**
-- **Integer-Exclusive Math**: All operations are performed in **Paise (Integer)**. By multiplying inputs by 100 on intake, we eliminate the floating-point precision issues that plague standard JavaScript financial apps. 
-- **Double-Entry Ledger**: Every single movement of money creates a symmetric `DEBIT` and `CREDIT` record in an immutable ledger, ensuring zero leakage.
+### 🔢 **Integer-Exclusive Math (Paise Logic)**
+Floating-point errors can lead to "missing cents" in financial apps. SentinelLedger eliminates this by:
+- Converting all currency inputs to **Integers (Paise/Cents)** immediately (e.g., `10.50 INR` -> `1050 Paise`).
+- Performing all calculations as integers and only converting back to decimals for display.
 
-### 🛡️ **Defensive Engineering**
-- **Idempotency Control**: Uses unique keys to ensure that a command (like `Pay $100`) is executed **EXACTLY ONCE**, even if the client retries the request a dozen times.
-- **Atomic Reliability**: All multi-account updates are wrapped in **MongoDB Sessions**. If the server, network, or database fails mid-transfer, the entire state is rolled back automatically. هیچ پولی گم نمیشود (No money is ever lost).
-- **Deadlock Shield**: System matches and sorts account IDs before locking, preventing concurrent circular wait states—a common cause of server hangs in high-traffic banking systems.
+### 🏛️ **Double-Entry Ledger Architecture**
+The Ledger is the "Immutable Source of Truth."
+- Every transaction creates a symmetric `DEBIT` and `CREDIT` record.
+- **Immutability**: Ledger entries can NEVER be edited or deleted. Errors are corrected only via reversal transactions.
+- **Audit Tool**: The `getBalance()` method can recalculate a user's balance from scratch by summing their entire ledger history.
+
+### 🛡️ **Atomic & Safe Transactions**
+- **MongoDB Sessions**: Multi-account updates (debiting sender and crediting receiver) are wrapped in ACID sessions. If any part fails, the entire transaction rolls back.
+- **Deadlock Prevention**: Sorting Account IDs before locking prevents circular wait states during high-traffic concurrent transfers.
+- **Idempotency Protected**: Uses unique keys to ensure that retried requests (due to network blips) never result in duplicate charges.
+
+### 🔐 **Security & Performance**
+- **JWT Authentication**: Secure, stateless authentication with **HttpOnly & Secure cookies** to prevent XSS/CSRF.
+- **Session Blacklisting**: Provides a way to invalidate tokens upon logout, even though they are stateless.
+- **Centralized Error Handling**: A global middleware that ensures consistent, professional error responses across the entire API.
 
 ---
 
-## 📊 System Architecture
+## 📊 Project Structure
 
-```mermaid
-graph TB
-    subgraph Client_Layer
-        User((User))
-    end
-
-    subgraph Security_Layer
-        auth[JWT authMiddleware]
-        idem[Idempotency Gate]
-    end
-
-    subgraph Logic_Layer
-        ATC[Account Controller]
-        TXC[Transaction Controller]
-        Sess[ACID Session Manager]
-    end
-
-    subgraph Data_Layer
-        Accounts[(Accounts DB)]
-        Ledger[(Immutable Ledger)]
-        Txns[(Transaction Records)]
-    end
-
-    subgraph Service_Layer
-        Mail[Asynchronous NodeMailer]
-    end
-
-    User -->|Secure Request| auth
-    auth -->|Validate Key| idem
-    idem -->|Process| TXC
-    TXC -->|Start Transaction| Sess
-    Sess -->|Sort & Lock| Accounts
-    Sess -->|Double Entry| Ledger
-    Sess -->|Record| Txns
-    Sess -->|Commit| DB_Commit[Success Response]
-    Txns -.->|Trigger| Mail
+```text
+├── src/
+│   ├── controllers/    # Business logic (Auth, Accounts, Transactions)
+│   ├── middlewares/    # Security, Validation, and Global Error Handling
+│   ├── models/         # MongoDB Schemas (User, Account, Ledger, Blacklist)
+│   ├── routes/         # API Route definitions
+│   ├── services/       # External services (Email/Nodemailer)
+│   ├── utils/          # Standardized ApiError and ApiResponse classes
+│   └── app.js          # Express app configuration
+├── tests/              # Comprehensive test suite
+├── server.js           # Server entry point
+└── README.md           # You are here!
 ```
 
 ---
 
 ## 📍 API Documentation
 
-### **Authentication**
+### **1. Authentication (`/api/auth`)**
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | User Onboarding & Automated Email Verification |
-| `POST` | `/api/auth/login` | Secure JWT Session Generation (HttpOnly Cookie) |
-| `POST` | `/api/auth/logout` | Secure Session Termination |
+| `POST` | `/register` | Create a new user and send welcome email. |
+| `POST` | `/login` | Authenticate and receive a secure JWT cookie. |
+| `POST` | `/logout` | Invalidate the session and clear cookies. |
 
-### **Vault Operations**
+### **2. Account Management (`/api/accounts`)**
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/api/account/all` | Net Worth Summary (Cross-account View) |
-| `GET` | `/api/account/balance/:id` | Precision balance lookup (Real-time) |
-| `PATCH` | `/api/account/close/:id` | Soft-Close with 'Pending Check' safety lock |
-| `DELETE` | `/api/account/delete/:id` | Hard-Delete (Permanent record cleanup) |
+| `POST` | `/` | Open a new currency account (e.g., INR). |
+| `GET` | `/` | Fetch all accounts owned by the user. |
+| `GET` | `/:accountId` | Get real-time balance and status. |
+| `PATCH` | `/close/:accountId` | Soft-close an account (requires zero balance). |
+| `DELETE` | `/:accountId` | Permanently delete a closed account record. |
 
-### **Movement & History**
+### **3. Transactions (`/api/transactions`)**
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `POST` | `/api/transaction/` | Peer-to-Peer Transfer (Idempotency Protected) |
-| `GET` | `/api/account/statement/:id` | Immutable Ledger Audit Trail |
+| `POST` | `/` | Execute a P2P transfer (Idempotency Key required). |
+| `POST` | `/system/initial-funds` | Admin injection of funds into an account. |
+| `GET` | `/statement/:accountId` | Fetch the last 10 entries from the immutable ledger. |
+
+---
+
+## ⚠️ Centralized Error Handling
+SentinelLedger uses a specialized `ApiError` class and a global `errorMiddleware` to ensure that every error follows a standard format:
+
+```json
+{
+    "success": false,
+    "statusCode": 400,
+    "message": "Insufficient funds in the source account",
+    "errors": [],
+    "stack": "..." // Only visible in Development
+}
+```
+**Benefits:**
+- **Normalized Responses**: No more raw HTML error pages; always returns JSON.
+- **Type Detection**: Automatically detects Mongoose `ValidationError` and `CastError` to return the correct HTTP codes (400, 404, etc.).
+
+---
+
+## 📧 Nodemailer & Email Alerts
+The system sends automatic emails for registration and transaction receipts using **OAuth2** for high reliability.
+
+### **How to Set Up:**
+1.  **Get Gmail App Password**: Go to Google Account -> Security -> 2-Step Verification -> App Passwords.
+2.  **Environment Variables**:
+    ```env
+    EMAIL_USER=your_email@gmail.com
+    EMAIL_PASS=your_app_password
+    ```
 
 ---
 
 ## ⚡ Setup & Installation
 
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+1.  **Clone & Install**
+    ```bash
+    git clone https://github.com/laksh0507/SentinelLedger.git
+    cd SentinelLedger
+    npm install
+    ```
 
-2. **Configure Environment** (`.env`)
-   ```env
-   PORT=5000
-   MONGODB_URI=your_uri
-   JWT_SECRET=your_secret
-   EMAIL_USER=your_email
-   EMAIL_PASS=app_password
-   ```
+2.  **Environment Setup** (`.env`)
+    ```env
+    PORT=4444
+    MONGODB_URI=your_mongodb_connection_string
+    JWT_SECRET=a_long_random_string
+    EMAIL_USER=your_email@gmail.com
+    EMAIL_PASS=your_app_password
+    ```
 
-3. **Ignite the Engine**
-   ```bash
-   npm run dev
-   ```
+3.  **Run Development Server**
+    ```bash
+    npm run dev
+    ```
+
+4.  **Run Integration Tests**
+    ```bash
+    node money_logic_test.js
+    ```
 
 ---
 
-> **Note**: This project follows strict financial industry standards (ISO 20022 principles). Built with ❤️ from **lakshmisha** for the Fintech community.
+### 🛡️ **Built by lakshmisha**
+*Driving the future of secure financial engineering.*

@@ -9,24 +9,33 @@ const ApiError = require("../utils/ApiError");
  * 3. In development, provide the stack trace for debugging.
  */
 const errorMiddleware = (err, req, res, next) => {
-    console.error("🔥 SERVER ERROR:", err.message || err);
-    let { statusCode, message } = err;
+    let error = err;
 
-    // If it's not a custom ApiError, default to 500 (Internal Server Error)
-    if (!(err instanceof ApiError)) {
-        statusCode = 500;
-        message = err.message || "Internal Server Error";
+    // If it's not a custom ApiError, normalize it
+    if (!(error instanceof ApiError)) {
+        let statusCode = error.statusCode || error.status || 500;
+        
+        // Handle specific Mongoose/MongoDB errors
+        if (error.name === "ValidationError") statusCode = 400;
+        if (error.name === "CastError") statusCode = 400; // Invalid ID format
+        if (error.code === 11000) statusCode = 409;      // Duplicate key error
+
+        const message = error.message || "Internal Server Error";
+        error = new ApiError(statusCode, message, error?.errors || [], err.stack);
     }
 
     const response = {
         success: false,
-        statusCode,
-        message,
-        // Pro-Tip: Hide stack trace in production for security!
-        ...(process.env.NODE_ENV === "development" ? { stack: err.stack } : {})
+        statusCode: error.statusCode,
+        message: error.message,
+        errors: error.errors,
+        // Include stack trace only in development
+        ...(process.env.NODE_ENV === "development" ? { stack: error.stack } : {})
     };
 
-    return res.status(statusCode).json(response);
+    console.error(`🔥 ERROR [${error.statusCode}]: ${error.message}`);
+    
+    return res.status(error.statusCode).json(response);
 };
 
 module.exports = errorMiddleware;
